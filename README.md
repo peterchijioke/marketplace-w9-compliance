@@ -33,13 +33,14 @@ npm install marketplace-w9-compliance
 ## Quick Start
 
 ### 1. Encrypt & Mask Sensitive TINs
+
 ```typescript
-import { encryptTin, decryptTin, maskTin } from 'marketplace-w9-compliance';
+import { encryptTin, decryptTin, maskTin } from "marketplace-w9-compliance";
 
 const SECRET_KEY = process.env.W9_TIN_ENCRYPTION_KEY!; // 32-byte secret
 
 // Encrypt before saving to database
-const encryptedData = encryptTin('123456789', SECRET_KEY, 'SSN');
+const encryptedData = encryptTin("123456789", SECRET_KEY, "SSN");
 console.log(encryptedData);
 // {
 //   encrypted: 'e9a...:f4c...:8b1...',
@@ -54,40 +55,42 @@ const rawTin = decryptTin(encryptedData.encrypted, SECRET_KEY);
 ```
 
 ### 2. Validate Form W-9 Submissions
+
 ```typescript
-import { validateW9Payload } from 'marketplace-w9-compliance';
+import { validateW9Payload } from "marketplace-w9-compliance";
 
 const result = validateW9Payload({
-  legalName: 'Acme Logistics LLC',
-  federalTaxClassification: 'LLC',
-  llcTaxClassification: 'S',
+  legalName: "Acme Logistics LLC",
+  federalTaxClassification: "LLC",
+  llcTaxClassification: "S",
   address: {
-    addressLine1: '100 Market St',
-    city: 'San Francisco',
-    state: 'CA',
-    postalCode: '94105',
+    addressLine1: "100 Market St",
+    city: "San Francisco",
+    state: "CA",
+    postalCode: "94105",
   },
-  tinType: 'EIN',
-  tin: '12-3456789',
-  signatureName: 'John Doe',
+  tinType: "EIN",
+  tin: "12-3456789",
+  signatureName: "John Doe",
   certificationAccepted: true,
 });
 
 if (!result.valid) {
   console.error(result.errors);
 } else {
-  console.log('Sanitized data ready to store:', result.sanitized);
+  console.log("Sanitized data ready to store:", result.sanitized);
 }
 ```
 
 ### 3. Guard Cashouts / Payouts
+
 ```typescript
-import { isEligibleForPayout } from 'marketplace-w9-compliance';
+import { isEligibleForPayout } from "marketplace-w9-compliance";
 
 // Inside your cashout/withdrawal endpoint
 const guard = isEligibleForPayout({
   country: partner.country, // 'US', 'CA', 'NG', etc.
-  status: partner.w9Status,  // 'NOT_SUBMITTED', 'VERIFIED', etc.
+  status: partner.w9Status, // 'NOT_SUBMITTED', 'VERIFIED', etc.
 });
 
 if (!guard.eligible) {
@@ -99,4 +102,4 @@ if (!guard.eligible) {
 
 ## License
 
-MIT © [Peter Chukwu](https://github.com/petechukwu)
+MIT © [Peter Chijioke](https://github.com/peterchijioke)
