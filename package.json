@@ -1,6 +1,9 @@
 {
   "name": "@peterchijioke/marketplace-w9-compliance",
   "version": "1.0.2",
+  "publishConfig": {
+    "registry": "https://www.npmjs.com/package/@peterchijioke/marketplace-w9-compliance"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/peterchijioke/marketplace-w9-compliance.git"
