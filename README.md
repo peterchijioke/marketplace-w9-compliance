@@ -1,100 +1,102 @@
 # marketplace-w9-compliance
 
-> **Turnkey IRS Form W-9 collection, AES-256-GCM TIN encryption, Avalara Track1099 integration, and payout compliance guards for marketplaces.**
+> **Turnkey IRS Form W-9 collection, AES-256-GCM TIN encryption, Avalara Track1099 integration, and payout compliance guards for marketplaces.**  
+> *Available in both **Go (Golang)** and **TypeScript / Node.js**.*
 
-[![npm version](https://img.shields.io/npm/v/marketplace-w9-compliance.svg)](https://www.npmjs.com/package/marketplace-w9-compliance)
+[![Go Reference](https://pkg.go.dev/badge/github.com/peterchijioke/marketplace-w9-compliance.svg)](https://pkg.go.dev/github.com/peterchijioke/marketplace-w9-compliance)
+[![npm version](https://img.shields.io/npm/v/@peterchijioke/marketplace-w9-compliance.svg)](https://www.npmjs.com/package/@peterchijioke/marketplace-w9-compliance)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 Marketplace and gig-economy platforms (food delivery, rideshare, creator networks, e-commerce) paying US contractors and merchants are legally required by the IRS to collect Form W-9, verify Taxpayer Identification Numbers (TIN), and protect themselves from backup withholding penalties (24% IRS penalty).
 
-`marketplace-w9-compliance` provides an audit-ready, end-to-end toolkit to collect, validate, encrypt, and guard payouts.
+`marketplace-w9-compliance` provides an audit-ready toolkit to collect, validate, encrypt, and guard payouts.
 
 ---
 
 ## Features
 
-- 🛡️ **Zero Plain-Text Storage**: Built-in AES-256-GCM authenticated encryption for SSNs & EINs (`ciphertext:iv:authTag`).
-- 📝 **IRS Form W-9 (Rev. March 2024) Validation**: Compliant validator for 7 federal entity classifications, LLC sub-types, and electronic perjury certification.
+- 🛡️ **Zero Plain-Text Storage**: Built-in AES-256-GCM authenticated encryption for SSNs & EINs (`ciphertext:nonce:tag`).
+- 📝 **IRS Form W-9 Validation**: Compliant validator for 7 federal entity classifications, LLC sub-types, and electronic perjury certification.
 - 🔒 **Automatic TIN Masking**: Converts sensitive TINs to masked formats (`***-**-6789` or `**-***6789`).
 - 🛑 **Payout Guard**: Protects your platform by blocking withdrawals for US accounts until W-9 verification is confirmed.
 - ⚡ **Avalara Track1099 Webhook Verifier**: Validates cryptographic HMAC-SHA256 signatures on incoming tax webhooks.
-- 📄 **Printable Substitute W-9 HTML**: Generates clean, audit-proof IRS substitute Form W-9 documents.
+- 🚀 **Zero Dependencies**: Pure standard library in both Go and TypeScript.
 
 ---
 
 ## Installation
 
+### For Go (Golang)
 ```bash
-npm install marketplace-w9-compliance
+go get github.com/peterchijioke/marketplace-w9-compliance
+```
+
+### For Node.js / TypeScript
+```bash
+npm install @peterchijioke/marketplace-w9-compliance
 ```
 
 ---
 
-## Quick Start
+## Go (Golang) Quick Start
 
-### 1. Encrypt & Mask Sensitive TINs
+```go
+package main
 
-```typescript
-import { encryptTin, decryptTin, maskTin } from "marketplace-w9-compliance";
+import (
+	"fmt"
+	"log"
 
-const SECRET_KEY = process.env.W9_TIN_ENCRYPTION_KEY!; // 32-byte secret
+	w9 "github.com/peterchijioke/marketplace-w9-compliance"
+)
 
-// Encrypt before saving to database
-const encryptedData = encryptTin("123456789", SECRET_KEY, "SSN");
-console.log(encryptedData);
-// {
-//   encrypted: 'e9a...:f4c...:8b1...',
-//   last4: '6789',
-//   masked: '***-**-6789',
-//   tinType: 'SSN'
-// }
+func main() {
+	secretKey := "YOUR_32_BYTE_ENCRYPTION_SECRET!!"
 
-// Decrypt for authorized 1099 annual filing
-const rawTin = decryptTin(encryptedData.encrypted, SECRET_KEY);
-// '123456789'
-```
+	// 1. Encrypt raw SSN before database storage
+	payload, err := w9.EncryptTIN("123456789", secretKey, w9.TINTypeSSN)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-### 2. Validate Form W-9 Submissions
+	fmt.Printf("Ciphertext: %s\n", payload.Encrypted)
+	fmt.Printf("Masked:     %s\n", payload.Masked) // ***-**-6789
+	fmt.Printf("Last 4:     %s\n", payload.Last4)  // 6789
 
-```typescript
-import { validateW9Payload } from "marketplace-w9-compliance";
+	// 2. Decrypt when needed for IRS 1099 annual filing
+	rawTIN, err := w9.DecryptTIN(payload.Encrypted, secretKey)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Decrypted:  %s\n", rawTIN)
 
-const result = validateW9Payload({
-  legalName: "Acme Logistics LLC",
-  federalTaxClassification: "LLC",
-  llcTaxClassification: "S",
-  address: {
-    addressLine1: "100 Market St",
-    city: "San Francisco",
-    state: "CA",
-    postalCode: "94105",
-  },
-  tinType: "EIN",
-  tin: "12-3456789",
-  signatureName: "John Doe",
-  certificationAccepted: true,
-});
-
-if (!result.valid) {
-  console.error(result.errors);
-} else {
-  console.log("Sanitized data ready to store:", result.sanitized);
+	// 3. Guard partner payouts before withdrawal
+	guard := w9.IsEligibleForPayout("US", w9.StatusNotSubmitted)
+	if !guard.Eligible {
+		fmt.Printf("Payout Blocked: %s (Code: %s)\n", guard.Message, guard.Code)
+	}
 }
 ```
 
-### 3. Guard Cashouts / Payouts
+---
+
+## TypeScript / Node.js Quick Start
 
 ```typescript
-import { isEligibleForPayout } from "marketplace-w9-compliance";
+import { encryptTin, decryptTin, maskTin, isEligibleForPayout } from '@peterchijioke/marketplace-w9-compliance';
 
-// Inside your cashout/withdrawal endpoint
+const SECRET_KEY = process.env.W9_TIN_ENCRYPTION_KEY!;
+
+const encryptedData = encryptTin('123456789', SECRET_KEY, 'SSN');
+console.log(encryptedData.masked); // ***-**-6789
+
 const guard = isEligibleForPayout({
-  country: partner.country, // 'US', 'CA', 'NG', etc.
-  status: partner.w9Status, // 'NOT_SUBMITTED', 'VERIFIED', etc.
+  country: 'US',
+  status: 'NOT_SUBMITTED',
 });
 
 if (!guard.eligible) {
-  throw new Error(guard.message); // HTTP 400 W9_REQUIRED
+  throw new Error(guard.message); // W9_REQUIRED
 }
 ```
 
@@ -102,4 +104,4 @@ if (!guard.eligible) {
 
 ## License
 
-MIT © [Peter Chijioke](https://github.com/peterchijioke)
+MIT © [Peter Chukwu](https://github.com/peterchijioke)
