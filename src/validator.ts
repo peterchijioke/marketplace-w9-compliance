@@ -76,7 +76,7 @@ export function validateW9Payload(payload: any): ValidationResult {
     errors.push('TIN must be exactly 9 digits');
   } else {
     // Basic IRS sanity check
-    if (/^000|666|^9/.test(cleanTin) && tinType === 'SSN') {
+    if (/^(000|666|9)/.test(cleanTin) && tinType === 'SSN') {
       errors.push('Invalid SSN prefix');
     }
     if (/^00/.test(cleanTin) && tinType === 'EIN') {

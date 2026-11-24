@@ -29,6 +29,13 @@ func TestTINEncryption(t *testing.T) {
 	}
 }
 
+func TestDecryptTINInvalidNonceLength(t *testing.T) {
+	// Short nonce should return an error rather than panicking
+	if _, err := DecryptTIN("aabbcc:deadbeef:00112233445566778899aabbccddeeff", "secret"); err == nil {
+		t.Errorf("expected error for invalid nonce length, got nil")
+	}
+}
+
 func TestMaskTIN(t *testing.T) {
 	if mask := MaskTIN("12-3456789", TINTypeEIN); mask != "**-***6789" {
 		t.Errorf("expected **-***6789, got %s", mask)

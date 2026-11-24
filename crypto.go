@@ -111,6 +111,9 @@ func DecryptTIN(encryptedString, secretKey string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if len(nonce) != aesGCM.NonceSize() {
+		return "", fmt.Errorf("invalid nonce length: expected %d bytes, got %d", aesGCM.NonceSize(), len(nonce))
+	}
 
 	// Recombine ciphertext + tag for Go's Open method
 	payload := append(ciphertext, tag...)

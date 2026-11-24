@@ -1,0 +1,6 @@
+node_modules/
+dist/
+*.tgz
+.README.md.bak
+.DS_Store
+coverage/

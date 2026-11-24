@@ -1,3 +1,3 @@
 module github.com/peterchijioke/marketplace-w9-compliance
 
-go 1.25
+go 1.21

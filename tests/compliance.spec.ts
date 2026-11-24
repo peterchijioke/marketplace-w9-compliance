@@ -1,6 +1,8 @@
+import * as crypto from 'crypto';
 import { encryptTin, decryptTin, maskTin } from '../src/crypto';
 import { validateW9Payload } from '../src/validator';
 import { isEligibleForPayout } from '../src/payout-guard';
+import { verifyTrack1099Webhook } from '../src/track1099';
 
 describe('Marketplace W-9 Compliance', () => {
   const TEST_KEY = 'a-super-secret-encryption-key-32b!';
@@ -62,6 +64,34 @@ describe('Marketplace W-9 Compliance', () => {
       const result = validateW9Payload(payload);
       expect(result.valid).toBe(false);
       expect(result.errors).toContain('You must accept the perjury statement certification');
+    });
+
+    it('accepts valid SSN containing 666 outside the prefix and rejects 666 prefix', () => {
+      const base = {
+        legalName: 'John Doe',
+        federalTaxClassification: 'INDIVIDUAL_SOLE_PROP',
+        address: { addressLine1: '123 Main', city: 'Austin', state: 'TX', postalCode: '78701' },
+        tinType: 'SSN',
+        signatureName: 'John Doe',
+        certificationAccepted: true,
+      };
+
+      expect(validateW9Payload({ ...base, tin: '123-45-6660' }).valid).toBe(true);
+      const invalid = validateW9Payload({ ...base, tin: '666-12-3456' });
+      expect(invalid.valid).toBe(false);
+      expect(invalid.errors).toContain('Invalid SSN prefix');
+    });
+  });
+
+  describe('Track1099 Webhook Verification', () => {
+    it('verifies valid HMAC-SHA256 webhook signatures and rejects invalid ones', () => {
+      const secret = 'whsec_test_secret';
+      const payload = JSON.stringify({ event: 'w9.verified', payeeId: '123' });
+      const digest = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+
+      expect(verifyTrack1099Webhook({ payload, signature: digest, webhookSecret: secret })).toBe(true);
+      expect(verifyTrack1099Webhook({ payload, signature: `sha256=${digest}`, webhookSecret: secret })).toBe(true);
+      expect(verifyTrack1099Webhook({ payload, signature: '00'.repeat(32), webhookSecret: secret })).toBe(false);
     });
   });
 
