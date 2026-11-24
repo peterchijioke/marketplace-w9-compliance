@@ -1,6 +1,6 @@
 {
   "name": "@peterchijioke/marketplace-w9-compliance",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "publishConfig": {
     "access": "public",
     "registry": "https://npm.pkg.github.com"
@@ -32,7 +32,9 @@
   "scripts": {
     "build": "tsup",
     "test": "jest",
-    "prepublishOnly": "npm run test && npm run build"
+    "prepublishOnly": "npm run test && npm run build",
+    "prepack": "cp README.md .README.md.bak && cp README.npm.md README.md",
+    "postpack": "test -f .README.md.bak && mv .README.md.bak README.md || true"
   },
   "keywords": [
     "w9",
