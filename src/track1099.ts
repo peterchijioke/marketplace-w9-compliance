@@ -19,7 +19,12 @@ export function verifyTrack1099Webhook(options: Track1099WebhookOptions): boolea
     .update(rawBody)
     .digest('hex');
 
-  const sigBuffer = Buffer.from(signature.replace(/^sha256=/, ''), 'hex');
+  const normalizedSig = signature.replace(/^sha256=/, '');
+  if (!/^[0-9a-fA-F]{64}$/.test(normalizedSig)) {
+    return false;
+  }
+
+  const sigBuffer = Buffer.from(normalizedSig, 'hex');
   const expBuffer = Buffer.from(expectedSignature, 'hex');
 
   if (sigBuffer.length !== expBuffer.length) {

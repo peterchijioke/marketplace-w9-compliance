@@ -3,6 +3,7 @@ import { EncryptedTinPayload, TinType } from './types';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12; // 96-bit recommended for GCM
+const AUTH_TAG_LENGTH = 16; // 128-bit GCM auth tag
 
 /**
  * Derives a consistent 32-byte key from a secret string.
@@ -71,8 +72,14 @@ export function decryptTin(encryptedString: string, secretKey: string): string {
   const key = deriveKey(secretKey);
   const iv = Buffer.from(ivHex, 'hex');
   const tag = Buffer.from(tagHex, 'hex');
+  if (iv.length !== IV_LENGTH) {
+    throw new Error(`Invalid IV length: expected ${IV_LENGTH} bytes`);
+  }
+  if (tag.length !== AUTH_TAG_LENGTH) {
+    throw new Error(`Invalid auth tag length: expected ${AUTH_TAG_LENGTH} bytes`);
+  }
 
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv, { authTagLength: AUTH_TAG_LENGTH });
   decipher.setAuthTag(tag);
 
   let decrypted = decipher.update(ciphertext, 'hex', 'utf8');

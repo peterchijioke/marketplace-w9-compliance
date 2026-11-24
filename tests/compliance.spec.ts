@@ -3,6 +3,7 @@ import { encryptTin, decryptTin, maskTin } from '../src/crypto';
 import { validateW9Payload } from '../src/validator';
 import { isEligibleForPayout } from '../src/payout-guard';
 import { verifyTrack1099Webhook } from '../src/track1099';
+import { generateSubstituteW9Html } from '../src/document';
 
 describe('Marketplace W-9 Compliance', () => {
   const TEST_KEY = 'a-super-secret-encryption-key-32b!';
@@ -24,6 +25,13 @@ describe('Marketplace W-9 Compliance', () => {
 
     it('throws error when secretKey is missing or TIN is not 9 digits', () => {
       expect(() => encryptTin('123', TEST_KEY)).toThrow();
+    });
+
+    it('rejects invalid IV or truncated auth tag lengths on decrypt', () => {
+      const enc = encryptTin('123456789', TEST_KEY, 'SSN');
+      const [ct, iv, tag] = enc.encrypted.split(':');
+      expect(() => decryptTin(`${ct}:deadbeef:${tag}`, TEST_KEY)).toThrow(/Invalid IV length/);
+      expect(() => decryptTin(`${ct}:${iv}:${tag.slice(0, 8)}`, TEST_KEY)).toThrow(/Invalid auth tag length/);
     });
   });
 
@@ -92,6 +100,36 @@ describe('Marketplace W-9 Compliance', () => {
       expect(verifyTrack1099Webhook({ payload, signature: digest, webhookSecret: secret })).toBe(true);
       expect(verifyTrack1099Webhook({ payload, signature: `sha256=${digest}`, webhookSecret: secret })).toBe(true);
       expect(verifyTrack1099Webhook({ payload, signature: '00'.repeat(32), webhookSecret: secret })).toBe(false);
+      expect(verifyTrack1099Webhook({ payload, signature: `${digest}zzz`, webhookSecret: secret })).toBe(false);
+    });
+  });
+
+  describe('Substitute W-9 HTML Generation', () => {
+    it('escapes HTML special characters to prevent XSS', () => {
+      const html = generateSubstituteW9Html(
+        {
+          legalName: '<script>alert("xss")</script>',
+          businessName: 'A & B <Corp>',
+          federalTaxClassification: 'LLC',
+          llcTaxClassification: 'S',
+          address: {
+            addressLine1: '<img src=x onerror=alert(1)>',
+            city: 'Austin',
+            state: 'TX',
+            postalCode: '78701',
+          },
+          tinType: 'SSN',
+          tin: '123456789',
+          signatureName: '<b>Jane</b>',
+          certificationAccepted: true,
+        },
+        { platformName: '<Acme & Co>' }
+      );
+
+      expect(html).not.toContain('<script>');
+      expect(html).not.toContain('<img src=x');
+      expect(html).toContain('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+      expect(html).toContain('&lt;Acme &amp; Co&gt;');
     });
   });
 

@@ -1,6 +1,15 @@
 import { W9FormData } from './types';
 import { maskTin } from './crypto';
 
+function escapeHtml(value: string): string {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /**
  * Generates an audit-ready, printable IRS Substitute Form W-9 HTML document.
  */
@@ -8,11 +17,24 @@ export function generateSubstituteW9Html(
   data: W9FormData,
   options?: { maskedTin?: string; platformName?: string }
 ): string {
-  const platform = options?.platformName || 'Marketplace Platform';
-  const displayTin = options?.maskedTin || maskTin(data.tin, data.tinType);
-  const signDate = data.signedAt
-    ? new Date(data.signedAt).toISOString().split('T')[0]
-    : new Date().toISOString().split('T')[0];
+  const platform = escapeHtml(options?.platformName || 'Marketplace Platform');
+  const displayTin = escapeHtml(options?.maskedTin || maskTin(data.tin, data.tinType));
+  const signDate = escapeHtml(
+    data.signedAt
+      ? new Date(data.signedAt).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0]
+  );
+  const legalName = escapeHtml(data.legalName);
+  const businessName = data.businessName ? escapeHtml(data.businessName) : '';
+  const taxClass = escapeHtml(data.federalTaxClassification);
+  const llcClass = data.llcTaxClassification ? escapeHtml(data.llcTaxClassification) : '';
+  const addressLine1 = escapeHtml(data.address.addressLine1);
+  const addressLine2 = data.address.addressLine2 ? escapeHtml(data.address.addressLine2) : '';
+  const city = escapeHtml(data.address.city);
+  const state = escapeHtml(data.address.state);
+  const postalCode = escapeHtml(data.address.postalCode);
+  const tinType = escapeHtml(data.tinType);
+  const signatureName = escapeHtml(data.signatureName);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -45,17 +67,17 @@ export function generateSubstituteW9Html(
   </div>
 
   <div class="box">
-    <div class="row"><div class="label">1. Legal Name:</div><div class="val">${data.legalName}</div></div>
-    ${data.businessName ? `<div class="row"><div class="label">2. Business / Trade Name:</div><div class="val">${data.businessName}</div></div>` : ''}
-    <div class="row"><div class="label">3. Federal Tax Classification:</div><div class="val">${data.federalTaxClassification}${data.llcTaxClassification ? ` (${data.llcTaxClassification})` : ''}</div></div>
-    <div class="row"><div class="label">4. Address:</div><div class="val">${data.address.addressLine1}${data.address.addressLine2 ? `, ${data.address.addressLine2}` : ''}</div></div>
-    <div class="row"><div class="label">5. City, State, ZIP:</div><div class="val">${data.address.city}, ${data.address.state} ${data.address.postalCode}</div></div>
+    <div class="row"><div class="label">1. Legal Name:</div><div class="val">${legalName}</div></div>
+    ${businessName ? `<div class="row"><div class="label">2. Business / Trade Name:</div><div class="val">${businessName}</div></div>` : ''}
+    <div class="row"><div class="label">3. Federal Tax Classification:</div><div class="val">${taxClass}${llcClass ? ` (${llcClass})` : ''}</div></div>
+    <div class="row"><div class="label">4. Address:</div><div class="val">${addressLine1}${addressLine2 ? `, ${addressLine2}` : ''}</div></div>
+    <div class="row"><div class="label">5. City, State, ZIP:</div><div class="val">${city}, ${state} ${postalCode}</div></div>
   </div>
 
   <div class="box">
     <div style="font-weight: 700; margin-bottom: 4px;">Part I: Taxpayer Identification Number (TIN)</div>
     <div class="tin-box">
-      <strong>${data.tinType}:</strong> ${displayTin}
+      <strong>${tinType}:</strong> ${displayTin}
     </div>
   </div>
 
@@ -68,7 +90,7 @@ export function generateSubstituteW9Html(
       3. I am a U.S. citizen or other U.S. person.
     </div>
     <div style="margin-top: 16px; display: flex; justify-content: space-between;">
-      <div><strong>Electronic Signature:</strong> ${data.signatureName}</div>
+      <div><strong>Electronic Signature:</strong> ${signatureName}</div>
       <div><strong>Date Signed:</strong> ${signDate}</div>
     </div>
   </div>
